@@ -9,6 +9,7 @@
 import UIKit
 import RxSwift
 import RxCocoa
+import RxDataSources
 
 class MainViewController: UIViewController {
     
@@ -23,29 +24,21 @@ class MainViewController: UIViewController {
         
         viewModel = MainViewModel()
         
-        viewModel?.datasource.configureCell = { (datasource, tableView, indexPath, item) in
+        let datasource = RxTableViewSectionedReloadDataSource<SectionViewModel>(configureCell: { (dataSource, tableView, indexPath, viewModel) in
             let cell = tableView.dequeueReusableCell(withIdentifier: "ScheduleCell", for: indexPath)
-            cell.textLabel?.text = item.title
-            cell.detailTextLabel?.text = item.timeString
+            cell.textLabel?.text = viewModel.title
+            cell.detailTextLabel?.text = viewModel.timeString
             
-            cell.textLabel?.isHighlighted = item.isCollision
-            cell.detailTextLabel?.isHighlighted = item.isCollision
+            cell.textLabel?.isHighlighted = viewModel.isCollision
+            cell.detailTextLabel?.isHighlighted = viewModel.isCollision
             return cell
-        }
+            
+        }, titleForHeaderInSection: { (dataSource, index) in
+            return dataSource[index].header
+        })
         
-        viewModel?.datasource.titleForHeaderInSection = { (datasource, index) in
-            return datasource[index].header
-        }
-        
-        if let datasource = viewModel?.datasource {
-            viewModel?.scheduleItems.asObservable()
-                .map { items in
-                    return Dictionary(grouping: items, by: { $0.dayString })
-                        .compactMap { SectionViewModel(header: $0.key, items: $0.value) }
-                        .sorted { $0.header < $1.header }
-                }
-                .bind(to: tableView.rx.items(dataSource: datasource))
-                .disposed(by: disposeBag)
-        }
+        viewModel?.scheduleItems.asObservable()
+            .bind(to: tableView.rx.items(dataSource: datasource))
+            .disposed(by: disposeBag)
     }
 }

@@ -25,10 +25,7 @@ extension SectionViewModel: SectionModelType {
 }
 
 class MainViewModel {
-    let scheduleItems = Variable<[ScheduleViewModel]>([])
-    var datasource = RxTableViewSectionedReloadDataSource<SectionViewModel>(configureCell: { (_, _, _, _) in
-        fatalError()
-    })
+    let scheduleItems = Variable<[SectionViewModel]>([])
     let disposeBag = DisposeBag()
     
     init() {
@@ -44,7 +41,10 @@ class MainViewModel {
                     scheduleViewModels[i+1].isCollision = true
                 }
             }
-            self?.scheduleItems.value = scheduleViewModels
+            
+            self?.scheduleItems.value = Dictionary(grouping: scheduleViewModels, by: { $0.dayString })
+                .map { SectionViewModel(header: $0.key, items: $0.value) }
+                .sorted { $0.header < $1.header }
         }, onError: { [weak self] error in
             self?.scheduleItems.value = []
         }).disposed(by: disposeBag)
